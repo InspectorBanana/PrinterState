@@ -29,8 +29,28 @@ def get_conn():
         password=os.getenv("NEON_PASSWORD", ""),
         sslmode=os.getenv("NEON_SSLMODE", "require"),
     )
+    # If user accidentally set a full connection string into NEON_HOST or similar,
+    # accept it: detect common patterns and try to connect directly.
+    host_val = params["host"]
+    if host_val:
+        host_val_str = str(host_val)
+        if "=" in host_val_str or "://" in host_val_str or host_val_str.startswith("postgres"):
+            try:
+                return psycopg2.connect(host_val_str)
+            except Exception:
+                # fall through to building a composed connection string and raise a clearer error later
+                pass
+
     conn_str = "host={host} port={port} dbname={dbname} user={user} password={password} sslmode={sslmode}".format(**params)
-    return psycopg2.connect(conn_str)
+    try:
+        return psycopg2.connect(conn_str)
+    except Exception as e:
+        # Provide a helpful error explaining likely misconfiguration
+        raise RuntimeError(
+            "Database connection failed. Check your .env: set DATABASE_URL="
+            "postgres://user:password@host:port/dbname OR set NEON_HOST,NEON_DB,NEON_USER,NEON_PASSWORD separately. "
+            f"Original error: {e}"
+        )
 
 
 @st.cache_data(ttl=25)
