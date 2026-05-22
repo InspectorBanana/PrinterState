@@ -53,14 +53,12 @@ def get_conn():
         )
 
 
-@st.cache_data(ttl=25)
 def load_reference_lists(conn):
     employees = pd.read_sql_query("SELECT id, employee_name FROM employees ORDER BY employee_name", conn)
     printers = pd.read_sql_query("SELECT id, printer_name FROM printers ORDER BY printer_name", conn)
     return employees, printers
 
 
-@st.cache_data(ttl=25)
 def query_dashboard_data(conn, start_date, end_date, employee_id=None, printer_id=None):
     params = {"start": start_date, "end": end_date}
     filters = ["print_time BETWEEN %(start)s AND %(end)s"]
